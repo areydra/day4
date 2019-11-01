@@ -1,33 +1,34 @@
 import React, { useState } from "react";
+import { Spinner } from "reactstrap";
 
 function App() {
   const [todolists, setTodoLists] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [cachetodolists, setCacheTodoLists] = useState([]);
   const [todolist, setTodoList] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadingFilter, setLoadingFilter] = useState(false);
   const [category, setCategory] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedEdit, setSelectedEdit] = useState([]);
+  const [notFound, setNotFound] = useState(false);
 
   const createTodoList = () => {
-    setTodoLists([
-      ...todolists,
-      {
-        id: Date.now(),
-        name: todolist,
-        category: category.toLowerCase(),
-        status: "process"
-      }
-    ]);
-    setCategories([
-      ...categories,
-      {
-        name: category.toLowerCase()
-      }
-    ]);
-    setCategory("");
-    setTodoList("");
+    setLoading(true);
+    setTimeout(() => {
+      setTodoLists([
+        ...todolists,
+        {
+          id: Date.now(),
+          name: todolist,
+          category: category.toLowerCase(),
+          status: "process"
+        }
+      ]);
+      setCategory("");
+      setTodoList("");
+      setLoading(false);
+    }, 1000);
   };
 
   const handleDelete = id => {
@@ -47,41 +48,65 @@ function App() {
   };
 
   const handleFilter = () => {
-    let filtered = todolists.filter(todol => {
-      if (selectedStatus.length && selectedCategory.length) {
-        return (
-          todol.status === selectedStatus && todol.category === selectedCategory
-        );
+    setLoadingFilter(true);
+
+    setTimeout(() => {
+      let filtered = todolists.filter(todol => {
+        if (selectedStatus.length && selectedCategory.length) {
+          return (
+            todol.status === selectedStatus &&
+            todol.category === selectedCategory
+          );
+        } else {
+          return (
+            todol.status === selectedStatus ||
+            todol.category === selectedCategory
+          );
+        }
+      });
+      if (filtered.length) {
+        setCacheTodoLists(todolists);
+        setTodoLists(filtered);
+        setLoadingFilter(false);
       } else {
-        return (
-          todol.status === selectedStatus || todol.category === selectedCategory
-        );
+        setNotFound(true);
+        setLoadingFilter(false);
       }
-    });
-    setCacheTodoLists(todolists);
-    setTodoLists(filtered);
+    }, 1000);
   };
 
   const handleClearFilter = () => {
-    setCacheTodoLists([]);
-    setTodoLists(cachetodolists);
+    if (notFound) {
+      setNotFound(false);
+    } else {
+      setCacheTodoLists([]);
+      setTodoLists(cachetodolists);
+    }
   };
 
   const handleEditTodoList = () => {
     if (!todolist.length && !category.length) {
       return false;
     } else {
-      let filtered = todolists.filter(todol => todol.id !== selectedEdit[0].id);
-      let editTodo = [
-        {
-          id: selectedEdit[0].id,
-          name: todolist.length ? todolist : selectedEdit[0].name,
-          category: category.length ? category : selectedEdit[0].category,
-          status: selectedEdit[0].status
-        }
-      ];
-      setTodoLists([...filtered, ...editTodo]);
-      setSelectedEdit([]);
+      setLoading(true);
+      setTimeout(() => {
+        let filtered = todolists.filter(
+          todol => todol.id !== selectedEdit[0].id
+        );
+        let editTodo = [
+          {
+            id: selectedEdit[0].id,
+            name: todolist.length ? todolist : selectedEdit[0].name,
+            category: category.length ? category : selectedEdit[0].category,
+            status: selectedEdit[0].status
+          }
+        ];
+        setTodoLists([...filtered, ...editTodo]);
+        setCategory("");
+        setTodoList("");
+        setSelectedEdit([]);
+        setLoading(false);
+      }, 1000);
     }
   };
 
@@ -138,6 +163,13 @@ function App() {
                   className="btn btn-success form-control"
                 >
                   Edit
+                  {loading ? (
+                    <Spinner
+                      color="primary"
+                      size="sm"
+                      style={{ marginLeft: 10 }}
+                    />
+                  ) : null}
                 </button>
               </div>
             </div>
@@ -149,6 +181,13 @@ function App() {
                 className="btn btn-success form-control"
               >
                 Create
+                {loading ? (
+                  <Spinner
+                    color="primary"
+                    size="sm"
+                    style={{ marginLeft: 10 }}
+                  />
+                ) : null}
               </button>
             </div>
           )}
@@ -168,12 +207,24 @@ function App() {
                   <option value={false} hidden>
                     Choose category
                   </option>
-                  {categories.length
-                    ? categories.map(category => (
-                        <option value={category.name} key={category.name}>
-                          {category.name}
-                        </option>
-                      ))
+                  {!notFound
+                    ? todolists.length
+                      ? todolists.map(todolist => (
+                          <option
+                            value={todolist.category}
+                            key={todolist.category}
+                          >
+                            {todolist.category}
+                          </option>
+                        ))
+                      : cachetodolists.map(todolist => (
+                          <option
+                            value={todolist.category}
+                            key={todolist.category}
+                          >
+                            {todolist.category}
+                          </option>
+                        ))
                     : null}{" "}
                 </select>
               </div>{" "}
@@ -189,8 +240,13 @@ function App() {
                   <option value={false} hidden>
                     Choose status
                   </option>
-                  <option value="process">Process</option>
-                  <option value="finish">Finish</option>
+                  {!notFound ? (
+                    <React.Fragment>
+                      {" "}
+                      <option value="process">Process</option>
+                      <option value="finish">Finish</option>
+                    </React.Fragment>
+                  ) : null}
                 </select>
               </div>{" "}
               <div className="col-12 mt-3">
@@ -200,6 +256,13 @@ function App() {
                   className="btn btn-success form-control"
                 >
                   Filter
+                  {loadingFilter ? (
+                    <Spinner
+                      color="primary"
+                      size="sm"
+                      style={{ marginLeft: 10 }}
+                    />
+                  ) : null}
                 </button>
               </div>
               <div className="col-12 mt-3">
@@ -222,55 +285,57 @@ function App() {
             </div>
             <div className="col-md-12">
               <div className="row">
-                {todolists.length
-                  ? todolists.map(todo => (
-                      <div class="col-3">
-                        <div class="card">
-                          <div class="card-body">
-                            <h5 class="card-title text-center">{todo.name}</h5>
-                            <p
-                              class="card-text text-right"
-                              style={{ fontSize: 10 }}
-                            >
-                              status : {todo.status}
-                            </p>
-                            <p
-                              class="card-text text-right"
-                              style={{ fontSize: 10 }}
-                            >
-                              category : {todo.category}
-                            </p>
-                            <div className="row">
-                              <div className="col-4">
-                                <button
-                                  className="btn btn-primary"
-                                  onClick={() => handleFinish(todo)}
-                                >
-                                  Finish
-                                </button>
-                              </div>
-                              <div className="col-4">
-                                <button
-                                  className="btn btn-secondary"
-                                  onClick={() => setSelectedEdit([todo])}
-                                >
-                                  Edit
-                                </button>
-                              </div>
-                              <div className="col-12 mt-1">
-                                <button
-                                  className="btn btn-danger form-control"
-                                  onClick={() => handleDelete(todo.id)}
-                                >
-                                  Delete
-                                </button>
-                              </div>
+                {notFound ? (
+                  <p>Data NotFound</p>
+                ) : todolists.length ? (
+                  todolists.map(todo => (
+                    <div class="col-3">
+                      <div class="card">
+                        <div class="card-body">
+                          <h5 class="card-title text-center">{todo.name}</h5>
+                          <p
+                            class="card-text text-right"
+                            style={{ fontSize: 10 }}
+                          >
+                            status : {todo.status}
+                          </p>
+                          <p
+                            class="card-text text-right"
+                            style={{ fontSize: 10 }}
+                          >
+                            category : {todo.category}
+                          </p>
+                          <div className="row">
+                            <div className="col-4">
+                              <button
+                                className="btn btn-primary"
+                                onClick={() => handleFinish(todo)}
+                              >
+                                Finish
+                              </button>
+                            </div>
+                            <div className="col-4">
+                              <button
+                                className="btn btn-secondary"
+                                onClick={() => setSelectedEdit([todo])}
+                              >
+                                Edit
+                              </button>
+                            </div>
+                            <div className="col-12 mt-1">
+                              <button
+                                className="btn btn-danger form-control"
+                                onClick={() => handleDelete(todo.id)}
+                              >
+                                Delete
+                              </button>
                             </div>
                           </div>
                         </div>
                       </div>
-                    ))
-                  : null}
+                    </div>
+                  ))
+                ) : null}
               </div>
             </div>
           </div>
